@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: 247 248 250;
+  --surface: 255 255 255;
+  --border: 226 230 236;
+  --fg: 17 24 39;
+  --muted: 107 114 128;
+  --brand: 37 99 235;
+}
+
+.dark {
+  --bg: 12 15 20;
+  --surface: 20 25 33;
+  --border: 38 45 56;
+  --fg: 237 240 244;
+  --muted: 148 158 171;
+  --brand: 96 165 250;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --bg: 12 15 20;
+    --surface: 20 25 33;
+    --border: 38 45 56;
+    --fg: 237 240 244;
+    --muted: 148 158 171;
+    --brand: 96 165 250;
+  }
+}
+
+html,
+body {
+  background-color: rgb(var(--bg));
+  color: rgb(var(--fg));
+}
+
+* {
+  border-color: rgb(var(--border));
+}
+
+.card {
+  background-color: rgb(var(--surface));
+  border: 1px solid rgb(var(--border));
+  border-radius: 0.75rem;
+}

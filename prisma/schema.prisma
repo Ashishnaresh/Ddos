@@ -1,0 +1,258 @@
+// Authorized Load Tester - data model
+// Notes:
+//  * Test result rows are treated as append-only at the application layer
+//    (see src/lib/audit.ts and src/lib/testRepo.ts). The DB grants used by the
+//    app role SHOULD additionally deny UPDATE/DELETE on AuditLog and TestMetric
+//    in production (documented in SECURITY.md).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  OPERATOR
+  VIEWER
+}
+
+enum AuthorizationStatus {
+  PENDING
+  APPROVED
+  SUSPENDED
+  REVOKED
+}
+
+enum Protocol {
+  HTTP
+  HTTPS
+}
+
+enum TestStatus {
+  CREATED
+  AUTHORIZING
+  AUTHORIZED
+  STARTING
+  RUNNING
+  STOPPING
+  COMPLETED
+  FAILED
+  ABORTED
+  REJECTED
+}
+
+enum HttpMethod {
+  GET
+  HEAD
+  POST
+  PUT
+  PATCH
+  DELETE
+  OPTIONS
+}
+
+enum AuditEventType {
+  LOGIN
+  LOGIN_FAILED
+  LOGOUT
+  USER_CREATED
+  USER_ROLE_CHANGED
+  TARGET_CREATED
+  TARGET_UPDATED
+  TARGET_APPROVED
+  TARGET_SUSPENDED
+  TARGET_REVOKED
+  TEST_REQUESTED
+  TEST_AUTHORIZED
+  TEST_STARTED
+  TEST_STOPPED
+  TEST_COMPLETED
+  TEST_FAILED
+  TEST_REJECTED
+  SAFETY_LIMIT_TRIGGERED
+  EMERGENCY_STOP
+  SERVICE_UNAVAILABLE
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  passwordHash   String
+  role           Role     @default(VIEWER)
+  displayName    String
+  isActive       Boolean  @default(true)
+  failedLogins   Int      @default(0)
+  lockedUntil    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  sessions       Session[]
+  createdTargets AuthorizedTarget[] @relation("TargetCreatedBy")
+  tests          Test[]
+  auditLogs      AuditLog[]
+
+  @@index([role])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash    String   @unique
+  csrfSecret   String
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
+  lastSeenAt   DateTime @default(now())
+  revokedAt    DateTime?
+  ipAtCreation String?
+  userAgent    String?
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model AuthorizedTarget {
+  id                     String              @id @default(cuid())
+  name                   String
+  hostname               String
+  protocol               Protocol            @default(HTTPS)
+  port                   Int
+  owner                  String
+  authorizationStatus    AuthorizationStatus @default(PENDING)
+  authorizationReference String
+  notes                  String?
+
+  // Per-target ceilings. Always clamped by the global env ceilings server-side.
+  maxRequestsPerSecond   Int
+  maxConcurrency         Int
+  maxDurationSeconds     Int
+
+  createdById            String
+  createdBy              User                @relation("TargetCreatedBy", fields: [createdById], references: [id])
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
+
+  tests                  Test[]
+
+  @@unique([hostname, port, protocol])
+  @@index([authorizationStatus])
+}
+
+model Test {
+  id                String     @id @default(cuid())
+  status            TestStatus @default(CREATED)
+
+  targetId          String
+  target            AuthorizedTarget @relation(fields: [targetId], references: [id])
+  requestedById     String
+  requestedBy       User       @relation(fields: [requestedById], references: [id])
+
+  // Effective (already clamped) configuration actually executed.
+  method            HttpMethod @default(GET)
+  path              String     @default("/")
+  requestsPerSecond Int
+  concurrency       Int
+  durationSeconds   Int
+  requestTimeoutMs  Int
+  headersJson       Json?
+  bodySize          Int        @default(0)
+
+  // Raw values the client asked for, kept for audit/forensics.
+  requestedConfigJson Json
+
+  // Telemetry / identity
+  sessionId         String
+  observedIp        String
+  targetHostname    String
+  targetPort        Int
+
+  workerId          String?
+  stopRequested     Boolean    @default(false)
+  stopReason        String?
+  stoppedById       String?
+
+  requestedAt       DateTime   @default(now())
+  authorizedAt      DateTime?
+  startedAt         DateTime?
+  endedAt           DateTime?
+
+  // Final aggregate summary (written once at completion).
+  summaryJson       Json?
+
+  metrics           TestMetric[]
+
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  @@index([status])
+  @@index([targetId])
+  @@index([requestedById])
+  @@index([requestedAt])
+}
+
+// Time-bucketed metric samples emitted by the worker while a test runs.
+// Append-only: the app never updates or deletes these rows.
+model TestMetric {
+  id                 String   @id @default(cuid())
+  testId             String
+  test               Test     @relation(fields: [testId], references: [id], onDelete: Cascade)
+  bucketStart        DateTime
+  intervalMs         Int
+
+  requests           Int
+  successes          Int
+  failures           Int
+  timeouts           Int
+  errors             Int
+  requestsPerSecond  Float
+  concurrencyPeak    Int
+
+  latencyAvgMs       Float
+  latencyP50Ms       Float
+  latencyP95Ms       Float
+  latencyP99Ms       Float
+  latencyMaxMs       Float
+
+  statusCountsJson   Json
+
+  createdAt          DateTime @default(now())
+
+  @@index([testId, bucketStart])
+}
+
+// Append-only audit trail. Never updated or deleted by the app.
+model AuditLog {
+  id            String         @id @default(cuid())
+  eventType     AuditEventType
+  userId        String?
+  user          User?          @relation(fields: [userId], references: [id])
+  observedIp    String?
+  testId        String?
+  targetId      String?
+  sessionId     String?
+  message       String?
+  result        String?
+  failureReason String?
+  metadataJson  Json?
+  createdAt     DateTime       @default(now())
+
+  @@index([eventType])
+  @@index([userId])
+  @@index([testId])
+  @@index([createdAt])
+}
+
+// Single-row global kill switch. id is always "global".
+model EmergencyStopState {
+  id          String   @id @default("global")
+  active      Boolean  @default(false)
+  reason      String?
+  activatedById String?
+  activatedAt DateTime?
+  clearedAt   DateTime?
+  updatedAt   DateTime @updatedAt
+}
