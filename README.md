@@ -131,7 +131,14 @@ npm run start                   # serve the production build
 
 > **Live deployment:** https://ddos-ashish-49ce.vercel.app
 > Project `ashish-49ce/ddos` · DB: Supabase `ddos` (ap-northeast-2) · functions
-> pinned to `icn1` (co-located with the DB) · daily cron backstop at 03:00 UTC.
+> pinned to `icn1` (co-located with the DB) · daily cron backstop at 03:00 UTC ·
+> auto-deploys on push to `main`.
+>
+> Worker reliability on Hobby: a test is picked up by a `waitUntil` kick the
+> moment it's authorized; the dashboard and the test page additionally call
+> `POST /api/worker/nudge` (authed, rate-limited) while any test is non-terminal,
+> which recovers a killed tick and drains the queue. Change your password at
+> `/settings`.
 
 Vercel has no persistent processes, so the long-lived `worker/index.ts` is
 replaced by a serverless tick:
