@@ -18,7 +18,7 @@ if (process.env.NODE_ENV !== "production") {
  * Lightweight health probe used by the fail-closed safety checks.
  * Returns true only if the database answered a trivial query quickly.
  */
-export async function isDatabaseHealthy(timeoutMs = 2000): Promise<boolean> {
+export async function isDatabaseHealthy(timeoutMs = 8000): Promise<boolean> {
   try {
     await Promise.race([
       prisma.$queryRaw`SELECT 1`,
