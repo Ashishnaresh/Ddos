@@ -159,6 +159,10 @@ export async function runLoadTest(
     clearInterval(flushTimer);
   }
 
+  // Distinguish a real early stop (shouldStop / external abort) from the
+  // internal abort we always fire during cleanup below.
+  const endedEarly = stoppedEarly || (externalSignal?.aborted ?? false);
+
   // Graceful drain: give in-flight requests up to one timeout window to finish,
   // then abort whatever remains.
   const drainDeadline = Date.now() + config.requestTimeoutMs;
@@ -176,7 +180,7 @@ export async function runLoadTest(
 
   return {
     summary,
-    stopped: stoppedEarly || controller.signal.aborted,
+    stopped: endedEarly,
     buckets,
   };
 }

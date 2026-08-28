@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 async function withMode(
-  mode: "none" | "single" | "list",
+  mode: "none" | "single" | "list" | "vercel",
   proxies: string,
   fn: (deriveClientIp: typeof import("@/lib/ip").deriveClientIp) => void,
 ) {
@@ -52,6 +52,18 @@ describe("deriveClientIp - never trusts client headers unless the operator opts 
           xRealIp: null,
         }),
       ).toBe("198.51.100.23");
+    });
+  });
+
+  it("mode=vercel uses x-real-ip (platform-set) over a spoofed XFF", async () => {
+    await withMode("vercel", "", (derive) => {
+      expect(
+        derive({
+          socketRemoteAddr: "10.0.0.1",
+          xForwardedFor: "1.1.1.1, 9.9.9.9",
+          xRealIp: "203.0.113.77",
+        }),
+      ).toBe("203.0.113.77");
     });
   });
 

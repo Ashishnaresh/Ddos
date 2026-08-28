@@ -26,7 +26,9 @@ const schema = z.object({
   MAX_PAYLOAD_BYTES: z.coerce.number().int().nonnegative().default(65536),
   MAX_CONCURRENT_TESTS: z.coerce.number().int().positive().default(5),
 
-  TRUSTED_PROXY_MODE: z.enum(["none", "single", "list"]).default("none"),
+  TRUSTED_PROXY_MODE: z
+    .enum(["none", "single", "list", "vercel"])
+    .default("none"),
   TRUSTED_PROXIES: z.string().default(""),
 
   AUDIT_RETENTION_DAYS: z.coerce.number().int().positive().default(365),

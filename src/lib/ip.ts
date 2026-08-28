@@ -13,6 +13,9 @@ import { env, trustedProxyCidrs } from "./env";
  *             trusted proxy appended) - a client cannot forge that position.
  *  - list   : walk XFF right-to-left, discarding addresses that are inside a
  *             configured trusted CIDR; the first untrusted address is the client.
+ *  - vercel : trust the platform. Vercel overwrites `x-real-ip` (and the FIRST
+ *             `x-forwarded-for` entry) with the true client address on every
+ *             request; a client cannot influence it. Use only on Vercel.
  */
 export interface RequestIpInput {
   socketRemoteAddr: string | null;
@@ -31,6 +34,11 @@ export function deriveClientIp(input: RequestIpInput): string {
     .split(",")
     .map((s) => normalize(s.trim()))
     .filter((s): s is string => Boolean(s));
+
+  if (env.TRUSTED_PROXY_MODE === "vercel") {
+    // Vercel sets x-real-ip to the real client; first XFF entry is the fallback.
+    return normalize(input.xRealIp) ?? chain[0] ?? direct;
+  }
 
   if (env.TRUSTED_PROXY_MODE === "single") {
     return chain.length > 0 ? chain[chain.length - 1]! : direct;
