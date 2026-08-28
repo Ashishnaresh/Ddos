@@ -3,6 +3,7 @@ node_modules
 out
 dist
 coverage
+*.tsbuildinfo
 playwright-report
 test-results
 *.log
