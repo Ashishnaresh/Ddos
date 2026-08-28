@@ -6,6 +6,11 @@ function csrfToken(): string {
   return m ? decodeURIComponent(m[1]!) : "";
 }
 
+interface FlattenedIssues {
+  formErrors?: string[];
+  fieldErrors?: Record<string, string[]>;
+}
+
 export class ApiClientError extends Error {
   constructor(
     public status: number,
@@ -13,7 +18,17 @@ export class ApiClientError extends Error {
     message: string,
     public issues?: unknown,
   ) {
-    super(message);
+    // If the server sent Zod field errors, surface the specific reasons instead
+    // of the generic "Invalid request."
+    const flat = issues as FlattenedIssues | undefined;
+    const parts: string[] = [];
+    if (flat?.fieldErrors) {
+      for (const [field, msgs] of Object.entries(flat.fieldErrors)) {
+        for (const m of msgs ?? []) parts.push(`${field}: ${m}`);
+      }
+    }
+    for (const m of flat?.formErrors ?? []) parts.push(m);
+    super(parts.length > 0 ? parts.join(" · ") : message);
   }
 }
 
