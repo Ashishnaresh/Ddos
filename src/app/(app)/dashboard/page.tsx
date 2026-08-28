@@ -41,6 +41,10 @@ export default function DashboardPage() {
     ]);
     setTests(t.tests);
     setEmergency(e.state);
+    // On serverless deployments this keeps the worker moving if a kick was missed.
+    if (t.tests.some((x) => ACTIVE.includes(x.status))) {
+      api("/api/worker/nudge", { method: "POST" }).catch(() => undefined);
+    }
   }
 
   useEffect(() => {

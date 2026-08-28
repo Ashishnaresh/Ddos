@@ -22,6 +22,7 @@ const NAV: { href: string; label: string; perm?: Permission }[] = [
   { href: "/targets", label: "Targets" },
   { href: "/audit", label: "Audit log", perm: "audit:view" },
   { href: "/admin", label: "Administration", perm: "users:manage" },
+  { href: "/settings", label: "Settings" },
 ];
 
 export function AppShell({ user, permissions, children }: Props) {

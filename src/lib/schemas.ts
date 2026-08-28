@@ -11,6 +11,11 @@ export const loginSchema = z.object({
   password: z.string().min(1).max(200),
 });
 
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1).max(200),
+  newPassword: z.string().min(12).max(200),
+});
+
 const hostnameRe =
   /^(?=.{1,253}$)(?!-)([a-zA-Z0-9-]{1,63}\.?)+[a-zA-Z0-9-]{1,63}$|^localhost$|^\d{1,3}(\.\d{1,3}){3}$/;
 

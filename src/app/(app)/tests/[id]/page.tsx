@@ -73,6 +73,13 @@ export default function TestDetailPage() {
 
   useEffect(() => {
     if (!test || TERMINAL.includes(test.status)) return;
+
+    // Serverless safety net: keep the worker moving / recover a killed tick.
+    const nudge = () =>
+      api("/api/worker/nudge", { method: "POST" }).catch(() => undefined);
+    nudge();
+    const nudgeTimer = setInterval(nudge, 12000);
+
     const es = new EventSource(`/api/tests/${id}/stream`);
     esRef.current = es;
     es.addEventListener("metric", (e) => {
@@ -90,7 +97,10 @@ export default function TestDetailPage() {
     es.onerror = () => {
       /* browser auto-reconnects; nothing to do */
     };
-    return () => es.close();
+    return () => {
+      es.close();
+      clearInterval(nudgeTimer);
+    };
   }, [test?.status, id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!test) return <p className="text-sm text-muted">Loading…</p>;
