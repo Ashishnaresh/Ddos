@@ -127,6 +127,53 @@ npm run build                   # prisma generate + next build
 npm run start                   # serve the production build
 ```
 
+## Deploy to Vercel
+
+Vercel has no persistent processes, so the long-lived `worker/index.ts` is
+replaced by a serverless tick:
+
+- **`GET/POST /api/worker/tick`** — claims and runs **one** authorized test
+  within a bounded wall-clock budget (`WORKER_TICK_BUDGET_SECONDS`, kept under
+  the function `maxDuration`). Authorized by `CRON_SECRET` (Vercel Cron's
+  `Authorization: Bearer` header) or `WORKER_TICK_SECRET` (`x-worker-secret`
+  header for manual/external triggers).
+- **Push-based scheduling** — when a test reaches `AUTHORIZED`, the API schedules
+  a `kickWorker()` via `waitUntil()` that fires one tick. The tick re-fires
+  itself while it keeps finding queued work, so the queue drains with no polling.
+- **`vercel.json` cron** — a daily catch-up run that recovers orphaned tests and
+  picks up anything missed. On **Vercel Pro** you can change the schedule to
+  `* * * * *` and raise `maxDuration` to 300 with matching
+  `WORKER_TICK_BUDGET_SECONDS` / `MAX_TEST_DURATION`.
+
+Required Vercel env vars (Production + Preview):
+
+| Key | Notes |
+|---|---|
+| `DATABASE_URL` | From the Neon (or other Postgres) integration. |
+| `SESSION_SECRET` | 32+ random bytes. |
+| `CRON_SECRET` | 32+ random bytes; Vercel Cron sends it automatically. |
+| `WORKER_TICK_SECRET` | 32+ random bytes; used for `waitUntil` self-nudge + manual triggers. |
+| `APP_URL` | The production URL, e.g. `https://ddos.vercel.app`. |
+| `MAX_TEST_DURATION` | `45` on Hobby (function cap is 60s). |
+| `WORKER_TICK_BUDGET_SECONDS` | `50` on Hobby. |
+| `MAX_GLOBAL_RPS`, `MAX_GLOBAL_CONCURRENCY`, `MAX_CONCURRENT_TESTS` | Tune to taste. |
+
+Migrations are **not** run by the Vercel build. Run them once against the
+provisioned database:
+
+```bash
+vercel env pull .env.local --environment=production
+DATABASE_URL="$(grep '^DATABASE_URL=' .env.local | cut -d= -f2- | tr -d '\"')" npm run prisma:deploy
+# optional first admin + demo target:
+DATABASE_URL="…" npm run db:seed
+```
+
+Manual worker trigger (e.g. from an external 1-minute pinger on Hobby):
+
+```bash
+curl -X POST -H "x-worker-secret: $WORKER_TICK_SECRET" https://<your-app>/api/worker/tick
+```
+
 ## Configuration
 
 All configuration is via environment variables — see

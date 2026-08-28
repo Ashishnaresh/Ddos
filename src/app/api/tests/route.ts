@@ -1,9 +1,11 @@
+import { waitUntil } from "@vercel/functions";
 import { defineHandler, json } from "@/lib/apiHandler";
 import { prisma } from "@/lib/db";
 import { writeAudit, tryWriteAudit } from "@/lib/audit";
 import { createTestSchema } from "@/lib/schemas";
 import { runPreflight, SafetyError } from "@/lib/safety";
 import { transitionTest } from "@/lib/testRepo";
+import { kickWorker } from "@/lib/kickWorker";
 import { logger } from "@/lib/logger";
 
 export const runtime = "nodejs";
@@ -116,6 +118,10 @@ export const POST = defineHandler(
         result: "authorized",
         metadata: { effective },
       });
+
+      // Nudge the serverless worker to pick this up now (no-op when a
+      // long-lived worker is running). Continues after the response is sent.
+      waitUntil(kickWorker(`test-authorized:${test.id}`));
 
       return json({ test: authorized }, 201);
     } catch (err) {

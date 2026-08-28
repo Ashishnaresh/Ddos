@@ -7,8 +7,15 @@ coverage
 playwright-report
 test-results
 *.log
+.DS_Store
+prisma/*.db
+
+# local env — the committed template is .env.example
 .env
 .env.local
 .env.*.local
-.DS_Store
-prisma/*.db
+.env.development
+.env.production
+
+# vercel
+.vercel

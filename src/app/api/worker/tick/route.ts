@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import { waitUntil } from "@vercel/functions";
 import { timingSafeEqual } from "node:crypto";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
+import { kickWorker } from "@/lib/kickWorker";
 import { recoverOrphans, runOneTick } from "@/lib/workerCore";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-// Vercel clamps this to the plan maximum (Hobby 60s, Pro 300s). The tick's own
-// time budget is WORKER_TICK_BUDGET_SECONDS and must be set below this.
-export const maxDuration = 300;
+// Hobby plan caps function duration at 60s. Raise this to 300 on Pro and bump
+// WORKER_TICK_BUDGET_SECONDS + MAX_TEST_DURATION to match.
+export const maxDuration = 60;
 
 function safeEqual(a: string, b: string): boolean {
   const ab = Buffer.from(a);
@@ -53,6 +55,9 @@ async function handle(req: NextRequest): Promise<NextResponse> {
       hardDeadlineMs: deadline,
       externalShouldStop: () => Date.now() > deadline,
     });
+    // If we did work, there may be more queued - chain another invocation.
+    // Bounded: it only re-fires while tests keep being found.
+    if (testId) waitUntil(kickWorker(`tick-drain:after:${testId}`));
     return NextResponse.json({
       ok: true,
       recovered,
