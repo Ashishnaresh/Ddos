@@ -35,6 +35,15 @@ const schema = z.object({
   WORKER_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(1000),
   METRICS_FLUSH_INTERVAL_MS: z.coerce.number().int().positive().default(1000),
 
+  // Serverless (Vercel Cron) worker model.
+  // CRON_SECRET is what Vercel Cron sends as `Authorization: Bearer <secret>`.
+  CRON_SECRET: z.string().default(""),
+  // Optional manual trigger secret for POST /api/worker/tick.
+  WORKER_TICK_SECRET: z.string().default(""),
+  // Wall-clock budget for a single serverless tick; keep below the function's
+  // maxDuration for the deployment's plan (Hobby 60s, Pro 300s, ...).
+  WORKER_TICK_BUDGET_SECONDS: z.coerce.number().int().positive().default(55),
+
   APP_URL: z.string().url().default("http://localhost:3000"),
 });
 

@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "prisma generate && next build",
+  "crons": [
+    {
+      "path": "/api/worker/tick",
+      "schedule": "* * * * *"
+    }
+  ]
+}
