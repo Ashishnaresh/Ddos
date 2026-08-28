@@ -27,29 +27,55 @@ export interface ExecuteOptions {
 }
 
 /** Tests a worker owned before a crash / redeploy cannot be trusted as running. */
-export async function recoverOrphans(workerId: string): Promise<number> {
-  const orphans = await prisma.test.findMany({
-    where: { workerId, status: { in: ["STARTING", "RUNNING", "STOPPING"] } },
+/** A running test is "stale" (its worker died) if it hasn't emitted a metric
+ * bucket recently. The engine flushes a bucket ~every second, so a healthy test
+ * is never stale. This is heartbeat-based rather than workerId-based, because on
+ * serverless several tick invocations share one WORKER_ID and must NOT abort
+ * each other's in-flight tests. */
+const STALE_MS = 90_000;
+
+export async function recoverOrphans(_workerId: string): Promise<number> {
+  const candidates = await prisma.test.findMany({
+    where: { status: { in: ["STARTING", "RUNNING", "STOPPING"] } },
+    select: { id: true, targetId: true, status: true, startedAt: true, authorizedAt: true },
   });
-  for (const t of orphans) {
-    await prisma.test.updateMany({
+
+  let recovered = 0;
+  const now = Date.now();
+  for (const t of candidates) {
+    const lastMetric = await prisma.testMetric.findFirst({
+      where: { testId: t.id },
+      orderBy: { bucketStart: "desc" },
+      select: { createdAt: true },
+    });
+    const lastBeat =
+      lastMetric?.createdAt.getTime() ??
+      t.startedAt?.getTime() ??
+      t.authorizedAt?.getTime() ??
+      0;
+    if (now - lastBeat < STALE_MS) continue; // healthy / still starting
+
+    const res = await prisma.test.updateMany({
       where: { id: t.id, status: { in: ["STARTING", "RUNNING", "STOPPING"] } },
       data: {
         status: "ABORTED",
-        stopReason: "Worker restart / redeploy; test could not be resumed",
+        stopReason: "Worker stopped responding; test could not be resumed",
         endedAt: new Date(),
       },
     });
-    await tryWriteAudit({
-      eventType: "TEST_FAILED",
-      testId: t.id,
-      targetId: t.targetId,
-      message: "Test aborted during worker recovery",
-      result: "aborted",
-    });
-    logger.warn("recovered orphan test", { testId: t.id, workerId });
+    if (res.count > 0) {
+      recovered++;
+      await tryWriteAudit({
+        eventType: "TEST_FAILED",
+        testId: t.id,
+        targetId: t.targetId,
+        message: "Stale test aborted during worker recovery",
+        result: "aborted",
+      });
+      logger.warn("recovered stale test", { testId: t.id });
+    }
   }
-  return orphans.length;
+  return recovered;
 }
 
 export interface ClaimContext {
