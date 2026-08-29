@@ -66,12 +66,14 @@ function LoginForm() {
             {busy ? "Signing in…" : "Sign in"}
           </Button>
         </form>
-        <p className="mt-4 text-center text-xs text-muted">
-          No account?{" "}
+        <div className="mt-4 flex items-center justify-between text-xs text-muted">
           <Link href="/register" className="text-brand hover:underline">
-            Register
+            Create account
           </Link>
-        </p>
+          <Link href="/forgot-password" className="text-brand hover:underline">
+            Forgot password?
+          </Link>
+        </div>
       </div>
     </div>
   );

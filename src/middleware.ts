@@ -7,14 +7,22 @@ import { SESSION_COOKIE } from "@/lib/constants";
  * happens server-side in each route handler / server component - never trust
  * this layer for security decisions.
  */
-const PUBLIC_PATHS = ["/login", "/register"];
+const PUBLIC_PATHS = [
+  "/login",
+  "/register",
+  "/forgot-password",
+  "/reset-password",
+];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const hasSession = Boolean(req.cookies.get(SESSION_COOKIE)?.value);
 
   if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
-    if (hasSession) {
+    // Bounce an already-authenticated user away from sign-in / sign-up only.
+    // A logged-in user may still legitimately open a password-reset link.
+    const bounceWhenAuthed = pathname === "/login" || pathname === "/register";
+    if (hasSession && bounceWhenAuthed) {
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
     return NextResponse.next();
@@ -38,5 +46,7 @@ export const config = {
     "/settings/:path*",
     "/login",
     "/register",
+    "/forgot-password",
+    "/reset-password",
   ],
 };

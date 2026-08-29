@@ -1,39 +1,27 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { api, ApiClientError } from "@/lib/clientApi";
 import { Alert, Button, Field, Input } from "@/components/ui";
-
-const RULES: { label: string; test: (p: string) => boolean }[] = [
-  { label: "At least 12 characters", test: (p) => p.length >= 12 },
-  { label: "A lowercase letter", test: (p) => /[a-z]/.test(p) },
-  { label: "An uppercase letter", test: (p) => /[A-Z]/.test(p) },
-  { label: "A digit", test: (p) => /[0-9]/.test(p) },
-];
+import { PasswordChecklist, passwordValid } from "@/components/PasswordChecklist";
 
 export default function RegisterPage() {
   const router = useRouter();
   const [form, setForm] = useState({ email: "", displayName: "", password: "" });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [touched, setTouched] = useState(false);
 
   function set(k: keyof typeof form) {
     return (e: React.ChangeEvent<HTMLInputElement>) =>
       setForm((f) => ({ ...f, [k]: e.target.value }));
   }
 
-  const checks = useMemo(
-    () => RULES.map((r) => ({ ...r, ok: r.test(form.password) })),
-    [form.password],
-  );
-  const pwValid = checks.every((c) => c.ok);
+  const pwValid = passwordValid(form.password);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    setTouched(true);
     setError(null);
     if (!pwValid) {
       setError("Password does not meet the requirements below.");
@@ -74,23 +62,9 @@ export default function RegisterPage() {
               required
               value={form.password}
               onChange={set("password")}
-              onBlur={() => setTouched(true)}
             />
           </Field>
-
-          {(touched || form.password.length > 0) && (
-            <ul className="space-y-1 text-xs">
-              {checks.map((c) => (
-                <li
-                  key={c.label}
-                  className={c.ok ? "text-emerald-500" : "text-muted"}
-                >
-                  {c.ok ? "✓" : "○"} {c.label}
-                </li>
-              ))}
-            </ul>
-          )}
-
+          <PasswordChecklist value={form.password} />
           <Button
             type="submit"
             variant="primary"

@@ -47,6 +47,13 @@ const schema = z.object({
   WORKER_TICK_BUDGET_SECONDS: z.coerce.number().int().positive().default(55),
 
   APP_URL: z.string().url().default("http://localhost:3000"),
+
+  // Email (password reset). When RESEND_API_KEY is unset the reset flow still
+  // works but the link is written to the server log instead of emailed - use
+  // the CLI (`npm run reset-password`) as the guaranteed lockout recovery.
+  RESEND_API_KEY: z.string().default(""),
+  EMAIL_FROM: z.string().default("Authorized Load Tester <onboarding@resend.dev>"),
+  PASSWORD_RESET_TTL_MINUTES: z.coerce.number().int().positive().default(30),
 });
 
 export type Env = z.infer<typeof schema>;

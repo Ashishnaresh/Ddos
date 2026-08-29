@@ -67,6 +67,8 @@ enum AuditEventType {
   USER_CREATED
   USER_ROLE_CHANGED
   PASSWORD_CHANGED
+  PASSWORD_RESET_REQUESTED
+  PASSWORD_RESET
   TARGET_CREATED
   TARGET_UPDATED
   TARGET_APPROVED
@@ -100,6 +102,7 @@ model User {
   createdTargets AuthorizedTarget[] @relation("TargetCreatedBy")
   tests          Test[]
   auditLogs      AuditLog[]
+  resetTokens    PasswordResetToken[]
 
   @@index([role])
 }
@@ -250,6 +253,22 @@ model AuditLog {
   @@index([userId])
   @@index([testId])
   @@index([createdAt])
+}
+
+// Short-lived, single-use password reset tokens. Only the SHA-256 hash of the
+// token is stored; the raw token lives only in the emailed link.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  ipAtCreation String?
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 // Single-row global kill switch. id is always "global".

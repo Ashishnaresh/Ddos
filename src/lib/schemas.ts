@@ -16,6 +16,15 @@ export const changePasswordSchema = z.object({
   newPassword: z.string().min(12).max(200),
 });
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().email().max(254),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(10).max(200),
+  newPassword: z.string().min(12).max(200),
+});
+
 const hostnameRe =
   /^(?=.{1,253}$)(?!-)([a-zA-Z0-9-]{1,63}\.?)+[a-zA-Z0-9-]{1,63}$|^localhost$|^\d{1,3}(\.\d{1,3}){3}$/;
 
