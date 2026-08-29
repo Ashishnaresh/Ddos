@@ -153,7 +153,7 @@ npm run start                   # serve the production build
 
 ## Deploy to Vercel
 
-> **Live deployment:** https://ddos-ashish-49ce.vercel.app
+> **Live deployment:** https://ddos-loadtester.vercel.app
 > Project `ashish-49ce/ddos` · DB: Supabase `ddos` (ap-northeast-2) · functions
 > pinned to `icn1` (co-located with the DB) · daily cron backstop at 03:00 UTC ·
 > auto-deploys on push to `main`.
