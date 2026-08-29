@@ -48,9 +48,12 @@ const schema = z.object({
 
   APP_URL: z.string().url().default("http://localhost:3000"),
 
-  // Email (password reset). When RESEND_API_KEY is unset the reset flow still
-  // works but the link is written to the server log instead of emailed - use
-  // the CLI (`npm run reset-password`) as the guaranteed lockout recovery.
+  // Email (password reset). Delivery order: SMTP_URL, then RESEND_API_KEY, then
+  // "log only" fallback. `npm run reset-password` + the admin reset button are
+  // the no-email recovery paths.
+  //   SMTP_URL example (Gmail app password):
+  //     smtp://you%40gmail.com:APP_PASSWORD@smtp.gmail.com:465
+  SMTP_URL: z.string().default(""),
   RESEND_API_KEY: z.string().default(""),
   EMAIL_FROM: z.string().default("Authorized Load Tester <onboarding@resend.dev>"),
   PASSWORD_RESET_TTL_MINUTES: z.coerce.number().int().positive().default(30),

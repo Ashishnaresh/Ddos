@@ -5,7 +5,7 @@ const nextConfig = {
   poweredByHeader: false,
   experimental: {
     // The load engine and Prisma are server-only; never bundle into the client.
-    serverComponentsExternalPackages: ["@prisma/client"],
+    serverComponentsExternalPackages: ["@prisma/client", "nodemailer"],
   },
   async headers() {
     const csp = [
