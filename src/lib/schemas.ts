@@ -75,4 +75,9 @@ export const updateUserSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
+export const adminResetPasswordSchema = z.object({
+  // Omit to have the server generate a strong password and return it once.
+  newPassword: z.string().min(12).max(200).optional(),
+});
+
 export type CreateTestInput = z.infer<typeof createTestSchema>;

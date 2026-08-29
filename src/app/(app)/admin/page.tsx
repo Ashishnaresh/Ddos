@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { api, ApiClientError } from "@/lib/clientApi";
 import { Alert, Badge, Button, Card, Select } from "@/components/ui";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 interface AdminUser {
   id: string;
@@ -18,6 +19,10 @@ export default function AdminPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [limits, setLimits] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [resetFor, setResetFor] = useState<AdminUser | null>(null);
+  const [resetResult, setResetResult] = useState<{ email: string; password: string } | null>(
+    null,
+  );
 
   async function load() {
     try {
@@ -42,6 +47,22 @@ export default function AdminPage() {
       await load();
     } catch (err) {
       setError(err instanceof ApiClientError ? err.message : "Update failed");
+    }
+  }
+
+  async function resetPassword(u: AdminUser) {
+    setError(null);
+    try {
+      const r = await api<{ password: string; user: { email: string } }>(
+        `/api/admin/users/${u.id}/reset-password`,
+        { method: "POST", json: {} },
+      );
+      setResetFor(null);
+      setResetResult({ email: r.user.email, password: r.password });
+      await load();
+    } catch (err) {
+      setResetFor(null);
+      setError(err instanceof ApiClientError ? err.message : "Reset failed");
     }
   }
 
@@ -105,12 +126,15 @@ export default function AdminPage() {
                     )}
                   </td>
                   <td className="py-2 pr-4">
-                    <Button
-                      variant={u.isActive ? "danger" : "primary"}
-                      onClick={() => update(u.id, { isActive: !u.isActive })}
-                    >
-                      {u.isActive ? "Disable" : "Enable"}
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        variant={u.isActive ? "danger" : "primary"}
+                        onClick={() => update(u.id, { isActive: !u.isActive })}
+                      >
+                        {u.isActive ? "Disable" : "Enable"}
+                      </Button>
+                      <Button onClick={() => setResetFor(u)}>Reset password</Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -122,6 +146,38 @@ export default function AdminPage() {
           sessions. The last active admin cannot be demoted or disabled.
         </p>
       </Card>
+
+      <ConfirmDialog
+        open={!!resetFor}
+        danger
+        title={`Reset password for ${resetFor?.email}?`}
+        confirmLabel="Generate new password"
+        description="A new password is generated and shown once. The user's current sessions are revoked and any lockout is cleared."
+        onCancel={() => setResetFor(null)}
+        onConfirm={async () => {
+          if (resetFor) await resetPassword(resetFor);
+        }}
+      />
+
+      {resetResult && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="card w-full max-w-md p-5">
+            <h3 className="text-base font-semibold">New password</h3>
+            <p className="mt-1 text-sm text-muted">
+              For <span className="font-medium text-fg">{resetResult.email}</span>.
+              Copy it now — it is not shown again.
+            </p>
+            <pre className="mt-3 select-all rounded-lg border border-border bg-bg px-3 py-2 text-sm">
+              {resetResult.password}
+            </pre>
+            <div className="mt-4 flex justify-end">
+              <Button variant="primary" onClick={() => setResetResult(null)}>
+                Done
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
