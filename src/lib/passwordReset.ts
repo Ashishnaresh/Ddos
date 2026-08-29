@@ -83,7 +83,13 @@ export async function requestPasswordReset(email: string, ip: string): Promise<v
   });
 
   if (!delivered) {
-    logger.warn("PASSWORD RESET LINK (email disabled)", { userId: user.id, link });
+    // Expected when no email provider is configured. Recovery is normally done
+    // via the admin "Reset password" button or `npm run reset-password`; this
+    // line is the manual fallback if you need the self-service link.
+    logger.info("password reset link generated (email delivery disabled)", {
+      userId: user.id,
+      link,
+    });
   }
 }
 
