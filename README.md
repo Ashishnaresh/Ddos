@@ -96,6 +96,22 @@ npm run dev                     # web on :3000
 npm run worker                  # worker (separate terminal)
 ```
 
+## Recovering a lost password
+
+**Any user:** `/forgot-password` → emailed reset link (valid 30 min, single-use).
+Requires `RESEND_API_KEY`; without it the link is written to the server log
+instead (`vercel logs` / your process output).
+
+**Locked-out admin (guaranteed, offline):**
+
+```bash
+# needs DATABASE_URL (+ DIRECT_URL) in .env, same as prisma migrate
+npm run reset-password -- admin@example.com                 # prints a new password
+npm run reset-password -- admin@example.com 'MyNewPass1234' # or set your own
+```
+
+It clears any lockout, reactivates the account, and revokes its sessions.
+
 ## Database migrations
 
 ```bash
