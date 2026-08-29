@@ -8,12 +8,14 @@ export function setSessionCookies(
   res: NextResponse,
   opts: { token: string; csrfSecret: string; expiresAt: Date },
 ): NextResponse {
+  // No `expires` / `maxAge` -> these are SESSION cookies: the browser drops them
+  // when it fully closes. Server-side we still enforce the absolute expiry
+  // (opts.expiresAt) and an idle timeout in resolveSession().
   res.cookies.set(SESSION_COOKIE, opts.token, {
     httpOnly: true,
     secure: isSecure(),
     sameSite: "lax",
     path: "/",
-    expires: opts.expiresAt,
   });
   // Readable by the frontend so it can echo it back in the CSRF header
   // (double-submit-cookie pattern). Not httpOnly by design.
@@ -22,7 +24,6 @@ export function setSessionCookies(
     secure: isSecure(),
     sameSite: "lax",
     path: "/",
-    expires: opts.expiresAt,
   });
   return res;
 }

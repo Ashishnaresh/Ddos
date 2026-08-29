@@ -58,8 +58,22 @@ export async function resolveSession(
   if (session.expiresAt.getTime() < Date.now()) return null;
   if (!session.user.isActive) return null;
 
-  // Sliding last-seen; cheap and best-effort.
-  if (Date.now() - session.lastSeenAt.getTime() > 60_000) {
+  // Idle timeout: no request for longer than the window => end the session.
+  const idleMs = env.SESSION_IDLE_TIMEOUT_SECONDS * 1000;
+  const idleFor = Date.now() - session.lastSeenAt.getTime();
+  if (idleFor > idleMs) {
+    await prisma.session
+      .updateMany({
+        where: { id: session.id, revokedAt: null },
+        data: { revokedAt: new Date() },
+      })
+      .catch(() => undefined);
+    return null;
+  }
+
+  // Sliding last-seen. Refresh often enough that the idle window is meaningful
+  // but not on every single request.
+  if (idleFor > 20_000) {
     await prisma.session
       .update({ where: { id: session.id }, data: { lastSeenAt: new Date() } })
       .catch(() => undefined);

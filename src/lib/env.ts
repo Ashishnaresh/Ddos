@@ -18,7 +18,12 @@ const schema = z.object({
   SESSION_SECRET: z
     .string()
     .min(16, "SESSION_SECRET must be at least 16 characters"),
+  // Absolute maximum session lifetime (DB expiresAt), regardless of activity.
   SESSION_TTL_SECONDS: z.coerce.number().int().positive().default(28800),
+  // Session is invalidated after this long with no request from the client.
+  SESSION_IDLE_TIMEOUT_SECONDS: z.coerce.number().int().positive().default(900),
+  // Client grace period after a tab is hidden/backgrounded before it signs out.
+  SESSION_TAB_HIDE_GRACE_SECONDS: z.coerce.number().int().nonnegative().default(5),
 
   MAX_GLOBAL_RPS: z.coerce.number().int().positive().default(2000),
   MAX_GLOBAL_CONCURRENCY: z.coerce.number().int().positive().default(500),

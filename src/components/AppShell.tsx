@@ -8,10 +8,12 @@ import { api } from "@/lib/clientApi";
 import { Badge, Button } from "./ui";
 import { clsx } from "./clsx";
 import { EmergencyStopButton } from "./EmergencyStopButton";
+import { SessionGuard } from "./SessionGuard";
 
 interface Props {
   user: { displayName: string; email: string; role: string };
   permissions: Permission[];
+  session: { idleSeconds: number; tabHideGraceSeconds: number };
   children: React.ReactNode;
 }
 
@@ -25,7 +27,7 @@ const NAV: { href: string; label: string; perm?: Permission }[] = [
   { href: "/settings", label: "Settings" },
 ];
 
-export function AppShell({ user, permissions, children }: Props) {
+export function AppShell({ user, permissions, session, children }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -40,6 +42,10 @@ export function AppShell({ user, permissions, children }: Props) {
 
   return (
     <div className="flex min-h-screen">
+      <SessionGuard
+        idleSeconds={session.idleSeconds}
+        tabHideGraceSeconds={session.tabHideGraceSeconds}
+      />
       <aside
         className={clsx(
           "fixed inset-y-0 left-0 z-40 w-60 transform border-r border-border bg-surface p-4 transition-transform md:static md:translate-x-0",

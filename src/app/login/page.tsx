@@ -14,6 +14,12 @@ export default function LoginPage() {
   );
 }
 
+const REASONS: Record<string, string> = {
+  away: "You were signed out because you left the app tab or window.",
+  inactive: "You were signed out after a period of inactivity.",
+  next: "Please sign in to continue.",
+};
+
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
@@ -21,6 +27,7 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const notice = REASONS[params.get("reason") ?? ""];
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -42,6 +49,11 @@ function LoginForm() {
       <div className="card w-full max-w-sm p-6">
         <h1 className="text-lg font-semibold">Authorized Load Tester</h1>
         <p className="mt-1 text-sm text-muted">Sign in to continue</p>
+        {notice && (
+          <div className="mt-3">
+            <Alert kind="info">{notice}</Alert>
+          </div>
+        )}
         <form onSubmit={submit} className="mt-5 space-y-3">
           {error && <Alert>{error}</Alert>}
           <Field label="Email">
