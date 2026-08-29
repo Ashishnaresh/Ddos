@@ -98,19 +98,27 @@ npm run worker                  # worker (separate terminal)
 
 ## Recovering a lost password
 
-**Any user:** `/forgot-password` → emailed reset link (valid 30 min, single-use).
-Requires `RESEND_API_KEY`; without it the link is written to the server log
-instead (`vercel logs` / your process output).
+Three independent paths, most convenient first:
 
-**Locked-out admin (guaranteed, offline):**
+1. **Admin resets it** — Administration → the user's row → **Reset password**.
+   A new password is generated and shown once; the user's sessions are revoked.
+   No email needed. (An admin resets their own via `/settings`.)
 
-```bash
-# needs DATABASE_URL (+ DIRECT_URL) in .env, same as prisma migrate
-npm run reset-password -- admin@example.com                 # prints a new password
-npm run reset-password -- admin@example.com 'MyNewPass1234' # or set your own
-```
+2. **Self-service email** — `/forgot-password` → reset link (valid 30 min,
+   single-use). Needs `RESEND_API_KEY`; with Resend's test sender it only
+   delivers to the Resend account owner's address until you verify a domain at
+   resend.com/domains and point `EMAIL_FROM` at it. Without a key the link is
+   written to the server log instead.
 
-It clears any lockout, reactivates the account, and revokes its sessions.
+3. **Total admin lockout (offline, guaranteed)**:
+
+   ```bash
+   # needs DATABASE_URL (+ DIRECT_URL) in .env, same as prisma migrate
+   npm run reset-password -- admin@example.com                 # prints a new password
+   npm run reset-password -- admin@example.com 'MyNewPass1234' # or set your own
+   ```
+
+   Clears any lockout, reactivates the account, revokes its sessions.
 
 ## Database migrations
 
