@@ -55,20 +55,47 @@ export function getClientIp(req: NextRequest): string {
   return deriveClientIp(ipInputFromHeaders(req.headers, socket));
 }
 
-function sameOrigin(req: NextRequest): boolean {
-  const origin = req.headers.get("origin");
-  if (!origin) {
-    // No Origin header on a state-changing request from a browser is unusual;
-    // fall back to Referer, else reject.
-    const referer = req.headers.get("referer");
-    if (!referer) return false;
-    try {
-      return new URL(referer).origin === env.APP_URL;
-    } catch {
-      return false;
-    }
+/**
+ * CSRF same-origin guard for mutations.
+ *
+ * "Same origin" means the request's `Origin` (or `Referer`) matches the origin
+ * the request was actually sent to - i.e. `<scheme>://<Host header>`. A
+ * cross-site attacker's page cannot make `Origin` match our Host, and cannot
+ * forge the victim browser's Host header. This naturally covers every alias /
+ * preview URL / custom domain the app is served from. `APP_URL` and
+ * `EXTRA_ALLOWED_ORIGINS` are accepted too, for setups behind a proxy that
+ * rewrites Host.
+ */
+function allowedOrigins(req: NextRequest): Set<string> {
+  const set = new Set<string>();
+  const host = req.headers.get("host");
+  if (host) {
+    const proto =
+      req.headers.get("x-forwarded-proto") ??
+      (req.nextUrl.protocol.replace(":", "") || "https");
+    set.add(`${proto}://${host}`);
   }
-  return origin === env.APP_URL;
+  set.add(env.APP_URL);
+  for (const o of env.EXTRA_ALLOWED_ORIGINS.split(",").map((s) => s.trim())) {
+    if (o) set.add(o);
+  }
+  return set;
+}
+
+function sameOrigin(req: NextRequest): boolean {
+  const allowed = allowedOrigins(req);
+  const origin = req.headers.get("origin");
+  if (origin) return allowed.has(origin);
+
+  // No Origin header (some same-origin GETs upgraded to POST, older clients):
+  // fall back to Referer.
+  const referer = req.headers.get("referer");
+  if (!referer) return false;
+  try {
+    return allowed.has(new URL(referer).origin);
+  } catch {
+    return false;
+  }
 }
 
 export function json(data: unknown, init?: number | ResponseInit): NextResponse {

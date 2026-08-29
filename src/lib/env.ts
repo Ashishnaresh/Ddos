@@ -47,6 +47,9 @@ const schema = z.object({
   WORKER_TICK_BUDGET_SECONDS: z.coerce.number().int().positive().default(55),
 
   APP_URL: z.string().url().default("http://localhost:3000"),
+  // Extra comma-separated origins accepted for CSRF same-origin checks, on top
+  // of the request's own <scheme>://<host> and APP_URL. Usually unnecessary.
+  EXTRA_ALLOWED_ORIGINS: z.string().default(""),
 
   // Email (password reset). Delivery order: SMTP_URL, then RESEND_API_KEY, then
   // "log only" fallback. `npm run reset-password` + the admin reset button are
