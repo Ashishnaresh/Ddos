@@ -3,6 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "description": "Authorized web load / DDoS-simulation testing platform for infrastructure you own or are explicitly authorized to test.",
+  "license": "UNLICENSED",
+  "author": "Ashish Naulach (https://github.com/Ashishnaresh)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ashishnaresh/Ddos.git"
+  },
   "engines": {
     "node": ">=20"
   },

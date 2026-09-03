@@ -83,9 +83,23 @@ duration / concurrency limits, escape the target origin, spoof identity headers,
 start tests as a `VIEWER`, resurrect a `REJECTED` test, and run while the
 emergency stop is active. All of them must fail. Keep it that way.
 
+## Secrets
+
+- All secrets come from environment variables — see `.env.example`. Never commit
+  a populated `.env`; `.env*` (except `.env.example`) and key/cert files are
+  git-ignored.
+- Every push and PR is scanned by the `gitleaks` GitHub Actions workflow.
+- Optional local guard: `git config core.hooksPath .githooks` enables a
+  pre-commit `gitleaks` scan (install `gitleaks` first: `brew install gitleaks`).
+- If a secret is ever exposed, rotate it at the provider immediately — see
+  `SECURITY.md`.
+
 ## Conventions
 
 - TypeScript strict mode.
 - Server-only modules (`db`, `engine`, `safety`, `session`) must never be
   imported into a client component.
 - Prefer editing `src/lib/*` over duplicating logic in a route or the worker.
+- Commits from this repo are authored `Ashish Naulach`
+  (`git config user.name` / `user.email` are set locally). Coding assistants are
+  tools, not the author — do not change the commit identity.

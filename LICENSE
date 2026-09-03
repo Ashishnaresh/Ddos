@@ -1,0 +1,47 @@
+Copyright (c) 2026 Ashish Naulach. All rights reserved.
+
+PROPRIETARY SOFTWARE LICENSE
+
+1. Ownership
+   The original source code, documentation, configuration, and all other
+   original materials in this repository (the "Software") are the exclusive
+   property of Ashish Naulach (the "Owner"). This Software is proprietary and
+   confidential. Publication of this repository does not place the Software in
+   the public domain and does not grant any license to it except as expressly
+   stated below.
+
+2. No license granted
+   No permission is granted to any person or entity to use, copy, reproduce,
+   modify, adapt, translate, publish, distribute, sublicense, sell, rent, lease,
+   host as a service, or create derivative works from the Software, in whole or
+   in part, except with the prior explicit written permission of the Owner.
+
+   Viewing the repository and its history for reference does not grant any of
+   the rights withheld above.
+
+3. Third-party components
+   The Software depends on third-party software (including, without limitation,
+   npm packages declared in package.json and package-lock.json). Those
+   components are not owned by the Owner, are not covered by this License, and
+   remain the property of their respective authors and subject to their own
+   license terms. Nothing in this License grants, transfers, restricts, or
+   otherwise affects any rights in those third-party components, and nothing
+   here shall be read as a claim of ownership over them.
+
+4. No warranty
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   OWNER BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN
+   ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM, OUT OF, OR IN
+   CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+5. Authorized-use requirement
+   The Software generates application-layer HTTP load. It is intended solely
+   for testing infrastructure that the operator owns or is explicitly
+   authorized in writing to test. Any other use is prohibited by the Owner and
+   may be unlawful.
+
+6. Contact
+   For permission requests, contact the Owner through the GitHub account
+   https://github.com/Ashishnaresh.

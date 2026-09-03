@@ -11,6 +11,20 @@ authorized red-team performance work — not for attacking third parties.
 > is no anonymous mode and no "test any host" mode. All activity is audited with
 > the acting user's identity and the server-observed client IP.
 
+## Ownership & license
+
+Copyright © 2026 Ashish Naulach. All rights reserved.
+
+This repository contains **proprietary software**. The original source code and
+original project materials are owned by Ashish Naulach and are **not** released
+under an open-source license — no permission is granted to copy, modify,
+distribute, sublicense, sell, or create derivative works from the original
+software except with explicit written permission. See [LICENSE](./LICENSE).
+
+Third-party dependencies and components (see `package.json`) remain the property
+of their respective authors and are governed by their own licenses; nothing here
+claims ownership of them.
+
 ## What it does
 
 - **RBAC** with `ADMIN` / `OPERATOR` / `VIEWER` roles.
@@ -72,16 +86,15 @@ This starts Postgres, runs `prisma migrate deploy`, seeds dev accounts and one
 local `APPROVED` echo target, then starts `web` (http://localhost:3000) and
 `worker`.
 
-Seeded dev accounts (development only — change/remove for any real deployment):
-
-| Role     | Email                  | Password           |
-|----------|------------------------|--------------------|
-| ADMIN    | admin@example.com      | `AdminPass123!`    |
-| OPERATOR | operator@example.com   | `OperatorPass123!` |
-| VIEWER   | viewer@example.com     | `ViewerPass123!`   |
+The seed (`npm run db:seed`) creates three local demo accounts
+(`admin@example.com`, `operator@example.com`, `viewer@example.com`) and **prints
+each generated password to the console once**. It is for local development only
+and refuses to run when `NODE_ENV=production`. Do not use seeded accounts in a
+real deployment.
 
 The **first account ever registered** on a fresh database automatically becomes
-`ADMIN`; everyone else starts as `VIEWER` and must be promoted.
+`ADMIN`; everyone else starts as `VIEWER` and must be promoted. For any real
+deployment, skip the seed and register your own first account.
 
 ## Quick start (local, without Docker)
 

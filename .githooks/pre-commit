@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Optional local secret-scan guard. Enable with:
+#   git config core.hooksPath .githooks
+#
+# Blocks a commit if `gitleaks` finds a secret in the staged changes.
+# If gitleaks is not installed the hook does nothing (CI still scans on push).
+set -euo pipefail
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "pre-commit: gitleaks not installed; skipping local scan (CI will still scan)." >&2
+  exit 0
+fi
+
+if ! gitleaks protect --staged --redact --no-banner; then
+  echo >&2
+  echo "pre-commit: potential secret detected in staged changes - commit blocked." >&2
+  echo "Remove the secret (use an env var / secret manager), then commit again." >&2
+  echo "If this is a false positive, add a gitleaks allowlist entry or commit with --no-verify." >&2
+  exit 1
+fi

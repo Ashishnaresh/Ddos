@@ -85,7 +85,31 @@ REVOKE DELETE          ON "Test"      FROM app_role;  -- keep history
   the `AUDIT_RETENTION_DAYS` window.
 - Rotate `SESSION_SECRET` and force re-login on a suspected compromise.
 
+## Handling secrets and sensitive data
+
+- **Never commit secrets.** Passwords, API keys, tokens, private keys, database
+  URLs with credentials, `SESSION_SECRET`, `CRON_SECRET`, `WORKER_TICK_SECRET`,
+  `RESEND_API_KEY`, `SMTP_URL`, and similar values must only live in environment
+  variables / your platform's secret manager. `.env`, `.env.local`, and
+  `.env.*.local` are git-ignored; the only committed template is `.env.example`,
+  which contains placeholders only.
+- **Never paste credentials into issues, pull requests, commit messages, logs,
+  or screenshots.** This includes production URLs that embed credentials.
+- **Do not include private user data** (real emails, IPs, audit-log exports,
+  customer information) in issues or PRs.
+- **If a secret is exposed** — committed, logged, screenshotted, or shared —
+  treat it as compromised: rotate/revoke it immediately at the provider
+  (database password, Resend key, `SESSION_SECRET`, etc.), then update the
+  environment. Removing a secret from the current files does **not** remove it
+  from Git history; history must be scrubbed separately (e.g. `git filter-repo`)
+  and force-pushed, and the credential rotated regardless.
+- **Automated scanning.** A `gitleaks` GitHub Actions workflow scans every push
+  and pull request. Enable GitHub *secret scanning* and *push protection* in the
+  repository settings as an additional layer. Optionally install the local
+  pre-commit hook: `git config core.hooksPath .githooks`.
+
 ## Reporting
 
-Report suspected vulnerabilities privately to the platform owner. Do not file
-public issues with working exploit steps.
+Report suspected vulnerabilities privately to the repository owner
+(https://github.com/Ashishnaresh). Do not file public issues with working
+exploit steps or with any embedded credentials.
