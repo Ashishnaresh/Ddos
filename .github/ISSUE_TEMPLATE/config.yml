@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability (private)
+    url: https://github.com/Ashishnaresh
+    about: >-
+      Do NOT open a public issue for security problems. Contact the owner
+      privately via this GitHub profile and follow SECURITY.md. Never include
+      credentials or user data.
+  - name: Security policy
+    url: https://github.com/Ashishnaresh/Ddos/blob/main/SECURITY.md
+    about: Read the threat model, safety controls, and secret-handling rules.

@@ -1,0 +1,38 @@
+name: Bug report
+description: Report a defect in the platform (non-security).
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        **Do not report security issues here.** Use the private contact in
+        SECURITY.md. **Never paste credentials, tokens, private URLs, or user
+        data** into this issue.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what actually occurred.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Deployment (local / Docker / Vercel), Node version, browser if UI.
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Redact anything sensitive before pasting.
+      render: shell
+    validations:
+      required: false
