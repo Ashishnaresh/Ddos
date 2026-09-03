@@ -3,12 +3,15 @@
 import { useEffect, useState } from "react";
 import { api, ApiClientError } from "@/lib/clientApi";
 import { Alert, Badge, Button, Card, Field, Input } from "@/components/ui";
+import { PasswordChecklist, passwordValid } from "@/components/PasswordChecklist";
+import { useToast } from "@/components/Toast";
 
 interface Me {
   user: { email: string; displayName: string; role: string };
 }
 
 export default function SettingsPage() {
+  const toast = useToast();
   const [me, setMe] = useState<Me | null>(null);
   const [cur, setCur] = useState("");
   const [next, setNext] = useState("");
@@ -19,7 +22,7 @@ export default function SettingsPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    api<Me>("/api/auth/me").then(setMe);
+    api<Me>("/api/auth/me").then(setMe).catch(() => undefined);
   }, []);
 
   async function submit(e: React.FormEvent) {
@@ -29,23 +32,25 @@ export default function SettingsPage() {
       setMsg({ kind: "error", text: "New passwords do not match." });
       return;
     }
+    if (!passwordValid(next)) {
+      setMsg({ kind: "error", text: "New password does not meet the requirements." });
+      return;
+    }
     setBusy(true);
     try {
       await api("/api/auth/change-password", {
         json: { currentPassword: cur, newPassword: next },
       });
-      setMsg({
-        kind: "success",
-        text: "Password changed. All other sessions were signed out.",
-      });
+      const text = "Password changed. All other sessions were signed out.";
+      setMsg({ kind: "success", text });
+      toast.success(text);
       setCur("");
       setNext("");
       setConfirm("");
     } catch (err) {
-      setMsg({
-        kind: "error",
-        text: err instanceof ApiClientError ? err.message : "Change failed",
-      });
+      const text = err instanceof ApiClientError ? err.message : "Change failed";
+      setMsg({ kind: "error", text });
+      toast.error(text);
     } finally {
       setBusy(false);
     }
@@ -90,7 +95,7 @@ export default function SettingsPage() {
               onChange={(e) => setCur(e.target.value)}
             />
           </Field>
-          <Field label="New password" hint="Min 12 chars, upper + lower + digit">
+          <Field label="New password">
             <Input
               type="password"
               autoComplete="new-password"
@@ -99,6 +104,7 @@ export default function SettingsPage() {
               onChange={(e) => setNext(e.target.value)}
             />
           </Field>
+          <PasswordChecklist value={next} />
           <Field label="Confirm new password">
             <Input
               type="password"

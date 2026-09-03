@@ -2,8 +2,19 @@
 
 import { useEffect, useState } from "react";
 import { api, ApiClientError } from "@/lib/clientApi";
-import { Alert, Badge, Button, Card, Field, Input, Select } from "@/components/ui";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Field,
+  Input,
+  Select,
+  Spinner,
+} from "@/components/ui";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useToast } from "@/components/Toast";
 
 interface Target {
   id: string;
@@ -35,25 +46,36 @@ const EMPTY = {
 };
 
 export default function TargetsPage() {
+  const toast = useToast();
   const [targets, setTargets] = useState<Target[]>([]);
   const [canManage, setCanManage] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ ...EMPTY });
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<{ id: string; status: string } | null>(null);
 
   async function load() {
-    const r = await api<{ targets: Target[]; canManage: boolean }>("/api/targets");
-    setTargets(r.targets);
-    setCanManage(r.canManage);
+    try {
+      const r = await api<{ targets: Target[]; canManage: boolean }>("/api/targets");
+      setTargets(r.targets);
+      setCanManage(r.canManage);
+    } catch (err) {
+      toast.error(err instanceof ApiClientError ? err.message : "Failed to load targets");
+    } finally {
+      setLoading(false);
+    }
   }
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setSaving(true);
     const payload = {
       ...form,
       port: Number(form.port),
@@ -65,14 +87,20 @@ export default function TargetsPage() {
     try {
       if (editingId) {
         await api(`/api/targets/${editingId}`, { method: "PATCH", json: payload });
+        toast.success("Target updated");
       } else {
         await api("/api/targets", { json: payload });
+        toast.success("Target added — it starts as PENDING until approved");
       }
       setForm({ ...EMPTY });
       setEditingId(null);
       await load();
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : "Save failed");
+      const msg = err instanceof ApiClientError ? err.message : "Save failed";
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -83,9 +111,12 @@ export default function TargetsPage() {
         method: "PATCH",
         json: { authorizationStatus: status },
       });
+      toast.success(`Target set to ${status}`);
       await load();
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : "Update failed");
+      const msg = err instanceof ApiClientError ? err.message : "Update failed";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setPending(null);
     }
@@ -103,7 +134,10 @@ export default function TargetsPage() {
 
       {canManage && (
         <Card title={editingId ? "Edit target" : "Add target"}>
-          <form onSubmit={save} className="grid grid-cols-2 gap-3 md:grid-cols-3">
+          <form
+            onSubmit={save}
+            className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3"
+          >
             <Field label="Name">
               <Input
                 required
@@ -176,9 +210,13 @@ export default function TargetsPage() {
                 }
               />
             </Field>
-            <div className="col-span-2 flex items-end gap-2 md:col-span-3">
-              <Button type="submit" variant="primary">
-                {editingId ? "Save changes" : "Add target (starts PENDING)"}
+            <div className="flex items-end gap-2 sm:col-span-2 md:col-span-3">
+              <Button type="submit" variant="primary" disabled={saving}>
+                {saving
+                  ? "Saving…"
+                  : editingId
+                    ? "Save changes"
+                    : "Add target (starts PENDING)"}
               </Button>
               {editingId && (
                 <Button
@@ -196,16 +234,30 @@ export default function TargetsPage() {
         </Card>
       )}
 
-      <div className="space-y-3">
-        {targets.map((t) => (
+      {loading ? (
+        <div className="flex items-center gap-2 text-sm text-muted">
+          <Spinner /> Loading targets…
+        </div>
+      ) : targets.length === 0 ? (
+        <EmptyState
+          title="No targets yet"
+          hint={
+            canManage
+              ? "Add a target above, then approve it before tests can run."
+              : "An administrator needs to add and approve a target."
+          }
+        />
+      ) : (
+        <div className="space-y-3">
+          {targets.map((t) => (
           <Card key={t.id}>
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <div className="flex items-center gap-2">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="font-medium">{t.name}</span>
                   <Badge>{t.authorizationStatus}</Badge>
                 </div>
-                <div className="mt-1 font-mono text-xs text-muted">
+                <div className="mt-1 break-anywhere font-mono text-xs text-muted">
                   {t.protocol.toLowerCase()}://{t.hostname}:{t.port}
                 </div>
                 <div className="mt-1 text-xs text-muted">
@@ -266,8 +318,9 @@ export default function TargetsPage() {
               )}
             </div>
           </Card>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       <ConfirmDialog
         open={!!pending}

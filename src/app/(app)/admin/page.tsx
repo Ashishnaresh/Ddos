@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { api, ApiClientError } from "@/lib/clientApi";
-import { Alert, Badge, Button, Card, Select } from "@/components/ui";
+import { Alert, Badge, Button, Card, EmptyState, Select, Spinner } from "@/components/ui";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useToast } from "@/components/Toast";
 
 interface AdminUser {
   id: string;
@@ -16,8 +17,10 @@ interface AdminUser {
 }
 
 export default function AdminPage() {
+  const toast = useToast();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [limits, setLimits] = useState<Record<string, unknown> | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [resetFor, setResetFor] = useState<AdminUser | null>(null);
   const [resetResult, setResetResult] = useState<{ email: string; password: string } | null>(
@@ -33,20 +36,34 @@ export default function AdminPage() {
       setUsers(u.users);
       setLimits(c.limits);
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : "Load failed");
+      const msg = err instanceof ApiClientError ? err.message : "Load failed";
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setLoading(false);
     }
   }
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function update(id: string, patch: Partial<Pick<AdminUser, "role" | "isActive">>) {
     setError(null);
     try {
       await api(`/api/admin/users/${id}`, { method: "PATCH", json: patch });
+      toast.success(
+        patch.role
+          ? `Role changed to ${patch.role}`
+          : patch.isActive
+            ? "User enabled"
+            : "User disabled",
+      );
       await load();
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : "Update failed");
+      const msg = err instanceof ApiClientError ? err.message : "Update failed";
+      setError(msg);
+      toast.error(msg);
     }
   }
 
@@ -59,10 +76,13 @@ export default function AdminPage() {
       );
       setResetFor(null);
       setResetResult({ email: r.user.email, password: r.password });
+      toast.success(`New password generated for ${r.user.email}`);
       await load();
     } catch (err) {
       setResetFor(null);
-      setError(err instanceof ApiClientError ? err.message : "Reset failed");
+      const msg = err instanceof ApiClientError ? err.message : "Reset failed";
+      setError(msg);
+      toast.error(msg);
     }
   }
 
@@ -82,7 +102,9 @@ export default function AdminPage() {
             ))}
           </dl>
         ) : (
-          <p className="text-sm text-muted">Loading…</p>
+          <div className="flex items-center gap-2 text-sm text-muted">
+            <Spinner /> Loading…
+          </div>
         )}
         <p className="mt-3 text-xs text-muted">
           Configured through environment variables only. Restart the app and
@@ -91,8 +113,15 @@ export default function AdminPage() {
       </Card>
 
       <Card title="Users">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+        {loading && users.length === 0 ? (
+          <div className="flex items-center gap-2 text-sm text-muted">
+            <Spinner /> Loading users…
+          </div>
+        ) : users.length === 0 ? (
+          <EmptyState title="No users" />
+        ) : (
+        <div className="x-scroll -mx-1 px-1">
+          <table className="w-full min-w-[32rem] text-sm">
             <thead className="text-left text-xs uppercase text-muted">
               <tr>
                 <th className="py-2 pr-4">User</th>
@@ -141,6 +170,7 @@ export default function AdminPage() {
             </tbody>
           </table>
         </div>
+        )}
         <p className="mt-3 text-xs text-muted">
           Changing a role or disabling a user immediately revokes their active
           sessions. The last active admin cannot be demoted or disabled.

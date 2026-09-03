@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/clientApi";
-import { Badge, Card, EmptyState, Stat } from "@/components/ui";
+import { Alert, Badge, Card, EmptyState, Spinner, Stat } from "@/components/ui";
 
 interface TestRow {
   id: string;
@@ -33,17 +33,26 @@ const ACTIVE = ["AUTHORIZING", "AUTHORIZED", "STARTING", "RUNNING", "STOPPING"];
 export default function DashboardPage() {
   const [tests, setTests] = useState<TestRow[]>([]);
   const [emergency, setEmergency] = useState<{ active: boolean; reason?: string | null } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   async function load() {
-    const [t, e] = await Promise.all([
-      api<{ tests: TestRow[] }>("/api/tests?limit=100"),
-      api<{ state: { active: boolean; reason?: string | null } }>("/api/admin/emergency-stop"),
-    ]);
-    setTests(t.tests);
-    setEmergency(e.state);
-    // On serverless deployments this keeps the worker moving if a kick was missed.
-    if (t.tests.some((x) => ACTIVE.includes(x.status))) {
-      api("/api/worker/nudge", { method: "POST" }).catch(() => undefined);
+    try {
+      const [t, e] = await Promise.all([
+        api<{ tests: TestRow[] }>("/api/tests?limit=100"),
+        api<{ state: { active: boolean; reason?: string | null } }>("/api/admin/emergency-stop"),
+      ]);
+      setTests(t.tests);
+      setEmergency(e.state);
+      setError(null);
+      // On serverless deployments this keeps the worker moving if a kick was missed.
+      if (t.tests.some((x) => ACTIVE.includes(x.status))) {
+        api("/api/worker/nudge", { method: "POST" }).catch(() => undefined);
+      }
+    } catch {
+      setError("Couldn't refresh — retrying…");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -61,7 +70,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-semibold">Dashboard</h1>
         <Link href="/tests/new" className="text-sm text-brand hover:underline">
           New test →
@@ -72,6 +81,14 @@ export default function DashboardPage() {
         <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-500">
           <strong>Global emergency stop is ACTIVE.</strong> No new tests can
           start. {emergency.reason ? `Reason: ${emergency.reason}` : ""}
+        </div>
+      )}
+
+      {error && <Alert kind="warn">{error}</Alert>}
+
+      {loading && tests.length === 0 && (
+        <div className="flex items-center gap-2 text-sm text-muted">
+          <Spinner /> Loading…
         </div>
       )}
 
@@ -101,8 +118,8 @@ export default function DashboardPage() {
         {completed.length === 0 ? (
           <EmptyState title="No completed tests yet" />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="x-scroll -mx-1 px-1">
+            <table className="w-full min-w-[40rem] text-sm">
               <thead className="text-left text-xs uppercase text-muted">
                 <tr>
                   <th className="py-2 pr-4">Target</th>

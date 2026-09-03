@@ -31,18 +31,36 @@
   }
 }
 
+html {
+  /* Never let a wide child (table, long token, chart) scroll the whole page. */
+  overflow-x: hidden;
+}
+
 html,
 body {
   background-color: rgb(var(--bg));
   color: rgb(var(--fg));
+  max-width: 100%;
 }
 
 * {
   border-color: rgb(var(--border));
 }
 
+/* Long unbroken strings (IDs, tokens, URLs) must wrap, not push the layout. */
+.break-anywhere {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
 .card {
   background-color: rgb(var(--surface));
   border: 1px solid rgb(var(--border));
   border-radius: 0.75rem;
+}
+
+/* Horizontal scroll containers get a subtle affordance on touch. */
+.x-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }

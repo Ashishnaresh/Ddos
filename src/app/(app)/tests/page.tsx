@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/clientApi";
-import { Badge, Card, EmptyState } from "@/components/ui";
+import { Badge, Card, EmptyState, Spinner } from "@/components/ui";
 
 interface TestRow {
   id: string;
@@ -24,10 +24,17 @@ interface TestRow {
 export default function TestsPage() {
   const [tests, setTests] = useState<TestRow[]>([]);
   const [filter, setFilter] = useState<string>("");
+  const [loading, setLoading] = useState(true);
 
   async function load() {
     const q = filter ? `?status=${filter}&limit=200` : "?limit=200";
-    setTests((await api<{ tests: TestRow[] }>(`/api/tests${q}`)).tests);
+    try {
+      setTests((await api<{ tests: TestRow[] }>(`/api/tests${q}`)).tests);
+    } catch {
+      /* transient — keep showing last data, poll retries */
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -39,7 +46,7 @@ export default function TestsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-semibold">Test history</h1>
         <select
           value={filter}
@@ -56,11 +63,18 @@ export default function TestsPage() {
       </div>
 
       <Card>
-        {tests.length === 0 ? (
-          <EmptyState title="No tests found" />
+        {loading && tests.length === 0 ? (
+          <div className="flex items-center gap-2 text-sm text-muted">
+            <Spinner /> Loading…
+          </div>
+        ) : tests.length === 0 ? (
+          <EmptyState
+            title={filter ? `No ${filter} tests` : "No tests yet"}
+            hint={filter ? undefined : "Start one from the New test page."}
+          />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="x-scroll -mx-1 px-1">
+            <table className="w-full min-w-[40rem] text-sm">
               <thead className="text-left text-xs uppercase text-muted">
                 <tr>
                   <th className="py-2 pr-4">Test</th>

@@ -13,9 +13,9 @@ export default defineConfig({
   use: { baseURL, trace: "on-first-retry" },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: `npm run start -- -p ${PORT}`,
-    url: baseURL,
-    timeout: 120_000,
+    command: `npx next start -p ${PORT}`,
+    url: `${baseURL}/api/health`,
+    timeout: 180_000,
     reuseExistingServer: !process.env.CI,
     env: { PORT },
   },

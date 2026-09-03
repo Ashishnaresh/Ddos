@@ -3,8 +3,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiClientError } from "@/lib/clientApi";
-import { Alert, Badge, Button, Card, Field, Input, Select } from "@/components/ui";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  Field,
+  Input,
+  Select,
+} from "@/components/ui";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useToast } from "@/components/Toast";
 
 interface Target {
   id: string;
@@ -21,6 +31,8 @@ interface Target {
 
 export default function NewTestPage() {
   const router = useRouter();
+  const toast = useToast();
+  const [starting, setStarting] = useState(false);
   const [targets, setTargets] = useState<Target[]>([]);
   const [targetId, setTargetId] = useState("");
   const [method, setMethod] = useState("GET");
@@ -45,6 +57,7 @@ export default function NewTestPage() {
 
   async function start() {
     setError(null);
+    setStarting(true);
     try {
       const res = await api<{ test: { id: string } }>("/api/tests", {
         json: {
@@ -57,14 +70,18 @@ export default function NewTestPage() {
           requestTimeoutMs: Number(timeout),
         },
       });
+      toast.success("Test authorized — starting now");
       router.push(`/tests/${res.test.id}`);
     } catch (err) {
       setConfirm(false);
-      setError(
+      const msg =
         err instanceof ApiClientError
           ? `${err.message}${err.code ? ` (${err.code})` : ""}`
-          : "Failed to start test",
-      );
+          : "Failed to start test";
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setStarting(false);
     }
   }
 
@@ -83,10 +100,10 @@ export default function NewTestPage() {
 
       <Card title="Target">
         {approved.length === 0 ? (
-          <p className="text-sm text-muted">
-            No approved targets available. Ask an administrator to add and approve
-            a target.
-          </p>
+          <EmptyState
+            title="No approved targets"
+            hint="Ask an administrator to add a target and set it to APPROVED before you can run a test."
+          />
         ) : (
           <Select value={targetId} onChange={(e) => setTargetId(e.target.value)}>
             <option value="">Select an approved target…</option>
@@ -116,7 +133,7 @@ export default function NewTestPage() {
       </Card>
 
       <Card title="Request">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Field label="Method">
             <Select value={method} onChange={(e) => setMethod(e.target.value)}>
               {["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"].map((m) => (
@@ -131,7 +148,7 @@ export default function NewTestPage() {
       </Card>
 
       <Card title="Load profile">
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-4">
           <Field label="Requests / sec">
             <Input type="number" min={1} value={rps} onChange={(e) => setRps(+e.target.value)} />
           </Field>
@@ -162,16 +179,16 @@ export default function NewTestPage() {
         </div>
       </Card>
 
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <Button variant="ghost" onClick={() => router.push("/tests")}>
           Cancel
         </Button>
         <Button
           variant="primary"
-          disabled={!canStart}
+          disabled={!canStart || starting}
           onClick={() => setConfirm(true)}
         >
-          Start test
+          {starting ? "Starting…" : "Start test"}
         </Button>
       </div>
 

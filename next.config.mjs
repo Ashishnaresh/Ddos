@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  output: "standalone",
   poweredByHeader: false,
   experimental: {
     // The load engine and Prisma are server-only; never bundle into the client.

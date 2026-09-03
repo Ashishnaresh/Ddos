@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { api } from "@/lib/clientApi";
+import { api, ApiClientError } from "@/lib/clientApi";
 import { Button } from "./ui";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { useToast } from "./Toast";
 
 interface StopState {
   state: { active: boolean; reason?: string | null };
@@ -13,6 +14,7 @@ interface StopState {
 
 export function EmergencyStopButton() {
   const router = useRouter();
+  const toast = useToast();
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<StopState | null>(null);
 
@@ -68,14 +70,26 @@ export function EmergencyStopButton() {
         }
         onCancel={() => setOpen(false)}
         onConfirm={async () => {
-          await api("/api/admin/emergency-stop", {
-            json: active
-              ? { scope: "all", clear: true, reason: "cleared from console" }
-              : { scope: "all", reason: "Emergency stop from console" },
-          });
-          setOpen(false);
-          await refresh();
-          router.refresh();
+          try {
+            await api("/api/admin/emergency-stop", {
+              json: active
+                ? { scope: "all", clear: true, reason: "cleared from console" }
+                : { scope: "all", reason: "Emergency stop from console" },
+            });
+            setOpen(false);
+            toast.success(
+              active
+                ? "Emergency stop cleared — new tests can start again"
+                : "Emergency stop activated — all tests aborted",
+            );
+            await refresh();
+            router.refresh();
+          } catch (err) {
+            setOpen(false);
+            toast.error(
+              err instanceof ApiClientError ? err.message : "Emergency stop failed",
+            );
+          }
         }}
       />
     </>

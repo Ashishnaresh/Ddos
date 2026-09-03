@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/clientApi";
-import { Alert, Badge, Button, Card, Stat } from "@/components/ui";
+import { Alert, Badge, Button, Card, Spinner, Stat } from "@/components/ui";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useToast } from "@/components/Toast";
 import {
   ErrorsChart,
   LatencyChart,
@@ -58,17 +59,21 @@ const TERMINAL = ["COMPLETED", "ABORTED", "FAILED", "REJECTED"];
 
 export default function TestDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const toast = useToast();
   const [test, setTest] = useState<Test | null>(null);
+  const [notFound, setNotFound] = useState(false);
   const [points, setPoints] = useState<MetricPoint[]>([]);
   const [confirmStop, setConfirmStop] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const esRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
-    api<{ test: Test }>(`/api/tests/${id}`).then((r) => setTest(r.test));
-    api<{ metrics: RawMetric[] }>(`/api/tests/${id}/metrics`).then((r) =>
-      setPoints(r.metrics.map(toPoint)),
-    );
+    api<{ test: Test }>(`/api/tests/${id}`)
+      .then((r) => setTest(r.test))
+      .catch(() => setNotFound(true));
+    api<{ metrics: RawMetric[] }>(`/api/tests/${id}/metrics`)
+      .then((r) => setPoints(r.metrics.map(toPoint)))
+      .catch(() => undefined);
   }, [id]);
 
   useEffect(() => {
@@ -103,7 +108,26 @@ export default function TestDetailPage() {
     };
   }, [test?.status, id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!test) return <p className="text-sm text-muted">Loading…</p>;
+  if (notFound) {
+    return (
+      <div className="space-y-3">
+        <h1 className="text-xl font-semibold">Test not found</h1>
+        <p className="text-sm text-muted">
+          This test doesn&apos;t exist or you don&apos;t have access to it.
+        </p>
+        <a href="/tests" className="text-sm text-brand hover:underline">
+          ← Back to tests
+        </a>
+      </div>
+    );
+  }
+
+  if (!test)
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted">
+        <Spinner /> Loading test…
+      </div>
+    );
 
   const s = test.summaryJson;
   const live = !TERMINAL.includes(test.status);
@@ -119,20 +143,23 @@ export default function TestDetailPage() {
         json: { reason: "Operator stopped from console" },
       });
       setConfirmStop(false);
+      toast.success("Stop requested — draining in-flight requests");
       const r = await api<{ test: Test }>(`/api/tests/${id}`);
       setTest(r.test);
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "Stop failed");
+      const msg = e instanceof Error ? e.message : "Stop failed";
+      setErr(msg);
+      toast.error(msg);
     }
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
           <h1 className="text-xl font-semibold">{test.target.name}</h1>
-          <p className="font-mono text-xs text-muted">
-            {test.method} {test.target.authorizationStatus === "APPROVED" ? "" : "(target "}
+          <p className="break-anywhere font-mono text-xs text-muted">
+            {test.method}{" "}
             {test.targetHostname}:{test.targetPort}
             {test.path}
           </p>
@@ -227,9 +254,9 @@ export default function TestDetailPage() {
 
 function Row({ k, v }: { k: string; v: React.ReactNode }) {
   return (
-    <div className="flex justify-between border-b border-border/50 py-1">
-      <dt className="text-muted">{k}</dt>
-      <dd className="font-mono">{v}</dd>
+    <div className="flex justify-between gap-3 border-b border-border/50 py-1">
+      <dt className="shrink-0 text-muted">{k}</dt>
+      <dd className="break-anywhere text-right font-mono">{v}</dd>
     </div>
   );
 }
